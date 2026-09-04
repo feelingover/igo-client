@@ -106,6 +106,26 @@ console.log('終局・スコア:');
   check('komi0: 黒地10 白地10 で差0', r0.margin === 0);
   const r = engine.score(s, 6.5);
   check('komi6.5: 白が6.5勝ち', r.winner === 'white' && r.margin === 6.5);
+
+  // 内訳（UI の地表示に使う）
+  check('黒の内訳: 石5 + 地5 = 10目', r.black.stones === 5 && r.black.territory === 5 && r.black.total === 10);
+  check('白の内訳: 石5 + 地5 + コミ6.5 = 16.5目', r.white.stones === 5 && r.white.territory === 5 && r.white.total === 16.5);
+  check('コミは白だけが持つ', r.black.komi === 0 && r.white.komi === 6.5);
+
+  // 帰属マップ ownership[y][x]
+  check('x=0列は黒地', r.ownership[0][0] === 'black' && r.ownership[4][0] === 'black');
+  check('x=4列は白地', r.ownership[0][4] === 'white' && r.ownership[4][4] === 'white');
+  check('石のある点は石の色', r.ownership[2][1] === 'black' && r.ownership[2][3] === 'white');
+  check('x=2列（両者に接する空点）はダメ＝null', r.ownership[0][2] === null && r.ownership[4][2] === null);
+}
+
+// --- 地が付かないケース（帰属なし） --------------------------------------
+console.log('地なし:');
+{
+  // 空の盤：全交点がダメ扱い（どちらの色にも囲まれていない）
+  const empty = engine.score(engine.emptyState(5), 6.5);
+  check('空盤は地ゼロ', empty.black.territory === 0 && empty.white.territory === 0);
+  check('空盤の帰属は全て null', empty.ownership.every((row) => row.every((o) => o === null)));
 }
 
 // --- moves[] からの再構築（受け入れ基準） --------------------------------

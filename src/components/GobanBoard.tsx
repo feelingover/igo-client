@@ -5,6 +5,7 @@ import { useGameStore } from '../state/gameStore';
 import type { Move, Point } from '../types';
 import { BoardGrid } from './BoardGrid';
 import { Stone } from './Stone';
+import { TerritoryMarkers } from './TerritoryMarkers';
 import { coord, createGeometry, nearestIntersection } from './boardGeometry';
 
 const BOARD_BG = '#e3b96b'; // 榧(かや)っぽい盤の色
@@ -54,6 +55,11 @@ export function GobanBoard({ boardPx }: { boardPx: number }) {
         <Rect x={0} y={0} width={boardPx} height={boardPx} fill={BOARD_BG} rx={6} />
         <BoardGrid geometry={g} />
         {stones}
+
+        {/* 終局時の地表示（両パス終局のみ score を持つ） */}
+        {game.score && (
+          <TerritoryMarkers geometry={g} board={board} ownership={game.score.ownership} />
+        )}
 
         {/* 直前の手のマーカー（小さな円） */}
         {last && (

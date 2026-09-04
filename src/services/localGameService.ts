@@ -3,7 +3,7 @@
 // async で統一（Phase2 で remoteGameService に差し替えてもインターフェースを変えないため）。
 import { createRuleEngine } from '../engine/ruleEngine';
 import type { EngineState, IRuleEngine } from '../engine/types';
-import type { GameState, Move, StoneColor } from '../types';
+import type { GameState, Move, ScoreResult, StoneColor } from '../types';
 import { opponent } from '../types';
 import type { IGameService } from './gameService';
 
@@ -20,11 +20,19 @@ interface GameRecord {
 const formatResult = (winner: StoneColor, margin: number): string =>
   `${winner === 'black' ? 'B' : 'W'}+${margin}`;
 
+const cloneScore = (score: ScoreResult): ScoreResult => ({
+  ...score,
+  black: { ...score.black },
+  white: { ...score.white },
+  ownership: score.ownership.map((row) => row.slice()),
+});
+
 const clone = (state: GameState): GameState => ({
   ...state,
   moves: state.moves.slice(),
   currentBoard: state.currentBoard.map((row) => row.slice()),
   captures: { ...state.captures },
+  score: state.score && cloneScore(state.score),
 });
 
 export class LocalGameService implements IGameService {
@@ -83,10 +91,12 @@ export class LocalGameService implements IGameService {
         state.moves.push(move);
         state.nextToPlay = opponent(move.color);
         // 両パス → 終局して中国ルールでスコア
+        // score は内訳（石・地・コミ）と交点ごとの帰属を含み、UI の地表示に使う。
         if (engine.isGameOver(next)) {
-          const { winner, margin } = engine.score(next, rec.komi);
+          const score = engine.score(next, rec.komi);
           state.status = 'finished';
-          state.result = formatResult(winner, margin);
+          state.result = formatResult(score.winner, score.margin);
+          state.score = score;
         }
         break;
       }
