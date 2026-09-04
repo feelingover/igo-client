@@ -1,6 +1,6 @@
 // 対局画面（SPEC 4章/10章）
 import { useEffect } from 'react';
-import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { ControlBar } from '../components/ControlBar';
 import { GobanBoard } from '../components/GobanBoard';
 import { useGameStore } from '../state/gameStore';
@@ -20,20 +20,22 @@ export function GameScreen() {
   // 盤は正方形・画面幅にフィット（縦長すぎないよう高さでも制限）
   const boardPx = Math.floor(Math.min(width - 24, height * 0.62));
 
+  // 終局時はスコア内訳が加わって画面に収まらないことがあるのでスクロール可能にする
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.screen} contentContainerStyle={styles.container}>
       <Text style={styles.title}>囲碁 — 9路 二人対局</Text>
       <View style={styles.boardWrap}>
         {game ? <GobanBoard boardPx={boardPx} /> : <Text>準備中…</Text>}
       </View>
       <ControlBar />
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: { flex: 1 },
   container: {
-    flex: 1,
+    flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,

@@ -1,5 +1,5 @@
 // ルールエンジンのインターフェース（SPEC 6章）
-import type { BoardState, Point, StoneColor } from '../types';
+import type { BoardState, Point, ScoreResult, StoneColor } from '../types';
 
 export interface IRuleEngine {
   emptyState(size: number): EngineState;
@@ -15,7 +15,10 @@ export interface IRuleEngine {
   capturesBetween(prev: EngineState, next: EngineState): number;
   isGameOver(state: EngineState): boolean; // 両パス
   // area scoring（中国ルール）。komi は引数で受ける（デフォ 6.5 など）
-  score(state: EngineState, komi: number): { winner: StoneColor; margin: number };
+  // NOTE: SPEC では戻り値が { winner, margin } だけだったが、終局時に「どこが
+  // 黒地／白地か」を UI で示すため、内訳（石・地・コミ）と交点ごとの帰属
+  // （ownership）を含む ScoreResult に拡張している。数え方自体は変更なし。
+  score(state: EngineState, komi: number): ScoreResult;
   toBoardState(state: EngineState): BoardState;
 }
 

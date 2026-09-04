@@ -2,7 +2,14 @@
 //
 // 着手禁止（自殺手）・取り・コウ（同形反復＝positional superko）・area scoring を実装。
 // 純粋な盤ロジックのみで RN/DOM 依存ゼロ。Node でそのまま動作検証できる。
-import type { BoardState, Point, StoneColor } from '../types';
+import type {
+  BoardState,
+  Point,
+  PointOwner,
+  ScoreBreakdown,
+  ScoreResult,
+  StoneColor,
+} from '../types';
 import { opponent } from '../types';
 import type { EngineState, IRuleEngine } from './types';
 
@@ -184,25 +191,24 @@ export class SelfRuleEngine implements IRuleEngine {
   }
 
   // area scoring（中国ルール）：自分の石数 + 自分だけが囲んだ空点
-  score(
-    state: EngineState,
-    komi: number,
-  ): { winner: StoneColor; margin: number } {
+  // 内訳と交点ごとの帰属（ownership）も返す。UI はこれで地を可視化する。
+  score(state: EngineState, komi: number): ScoreResult {
     const s = state as SelfEngineState;
     const size = s.size;
-    let black = 0;
-    let white = 0;
+    const stones = { black: 0, white: 0 };
+    const territory = { black: 0, white: 0 };
+    // 帰属マップ：石はその色、地は囲んだ色、ダメは null のまま
+    const ownership: PointOwner[][] = Array.from({ length: size }, () =>
+      Array<PointOwner>(size).fill(null),
+    );
 
     const seen = new Set<string>();
     for (let y = 0; y < size; y++) {
       for (let x = 0; x < size; x++) {
         const cell = s.board[y][x];
-        if (cell === 'black') {
-          black++;
-          continue;
-        }
-        if (cell === 'white') {
-          white++;
+        if (cell !== null) {
+          stones[cell]++;
+          ownership[y][x] = cell;
           continue;
         }
         // 空点：連結した空領域をまとめて評価
@@ -236,17 +242,33 @@ export class SelfRuleEngine implements IRuleEngine {
           }
         }
         // 1色だけに囲まれていればその色の地、両色（またはどちらも無し）ならダメ
-        if (borderColors.size === 1) {
-          if (borderColors.has('black')) black += region.length;
-          else white += region.length;
-        }
+        if (borderColors.size !== 1) continue;
+        const owner = borderColors.has('black') ? 'black' : 'white';
+        territory[owner] += region.length;
+        for (const pt of region) ownership[pt.y][pt.x] = owner;
       }
     }
 
-    const whiteTotal = white + komi;
-    const diff = black - whiteTotal;
-    if (diff >= 0) return { winner: 'black', margin: diff };
-    return { winner: 'white', margin: -diff };
+    const black: ScoreBreakdown = {
+      stones: stones.black,
+      territory: territory.black,
+      komi: 0, // コミは白だけが受け取る
+      total: stones.black + territory.black,
+    };
+    const white: ScoreBreakdown = {
+      stones: stones.white,
+      territory: territory.white,
+      komi,
+      total: stones.white + territory.white + komi,
+    };
+    const diff = black.total - white.total;
+    return {
+      winner: diff >= 0 ? 'black' : 'white',
+      margin: Math.abs(diff),
+      black,
+      white,
+      ownership,
+    };
   }
 
   toBoardState(state: EngineState): BoardState {

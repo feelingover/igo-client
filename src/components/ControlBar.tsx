@@ -1,9 +1,8 @@
 // パス/投了ボタン・手番表示・アゲハマ表示（SPEC 9章）
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useGameStore } from '../state/gameStore';
-import type { StoneColor } from '../types';
-
-const colorJa = (c: StoneColor): string => (c === 'black' ? '黒' : '白');
+import { ScorePanel } from './ScorePanel';
+import { colorJa, formatResult } from './resultFormat';
 
 function Button({
   label,
@@ -80,6 +79,9 @@ export function ControlBar() {
         </Text>
       </View>
 
+      {/* 終局時の地の内訳（両パス終局のみ。投了は地を数えない） */}
+      {finished && game.score && <ScorePanel score={game.score} />}
+
       {/* フィードバック */}
       {error && <Text style={styles.error}>{error}</Text>}
       {!error && preview && !finished && (
@@ -106,15 +108,6 @@ export function ControlBar() {
       </View>
     </View>
   );
-}
-
-// "B+5.5" → "黒 5.5目勝ち" / "W+R" → "白 中押し勝ち"
-function formatResult(result?: string): string {
-  if (!result) return '';
-  const [side, margin] = result.split('+');
-  const who = side === 'B' ? '黒' : '白';
-  if (margin === 'R') return `${who} 中押し勝ち`;
-  return `${who} ${margin}目勝ち`;
 }
 
 const styles = StyleSheet.create({
